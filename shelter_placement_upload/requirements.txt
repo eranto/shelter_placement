@@ -1,6 +1,0 @@
-requests>=2.31
-numpy>=1.24
-Pillow>=10.0
-matplotlib>=3.7
-python-bidi>=0.4.2
-folium>=0.15
