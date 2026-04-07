@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Large OSM cache files (regeneratable, ~10MB)
+osm_roads_cache.pkl
+osm_roads_traffic_cache.pkl
+
+# Intermediate/scratch map outputs
+road_shelters_*.html
+road_shelters_*.jpg
