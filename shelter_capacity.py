@@ -33,7 +33,7 @@ WARTIME_FRACTION   = 0.10  # 10% of normal traffic remains on roads during confl
 PEAK_HOUR_FRAC     = 0.09  # peak hour = 9% of daily AADT
 PEOPLE_PER_VEHICLE = 1.3
 
-STANDARD_SIZES = [6, 12, 20, 30, 50]
+STANDARD_SIZES = [6, 12, 20]   # three tiers: 30 % / 30 % / 40 % by traffic rank
 
 # Speed by highway type (km/h) — fallback when no maxspeed tag is present
 HIGHWAY_SPEED = {
@@ -104,18 +104,20 @@ def haversine_km(lat1, lon1, lat2, lon2):
          * math.sin(dlon / 2) ** 2)
     return R * 2 * math.asin(math.sqrt(a))
 
-def round_up_to_standard(n):
-    """Map estimated catchment population to a shelter capacity tier.
-
-    Thresholds are set so that 12p is the most common outcome (typical road),
-    6p covers genuinely low-traffic rural roads, and larger sizes are reserved
-    for high-AADT corridors.
-    """
-    if n <=  9: return 6
-    if n <= 16: return 12
-    if n <= 24: return 20
-    if n <= 40: return 30
-    return 50
+def assign_capacity_by_rank(results):
+    """Assign capacity tiers by traffic rank: bottom 30% → 6p, next 30% → 12p, top 40% → 20p."""
+    n = len(results)
+    order = sorted(range(n), key=lambda i: results[i]['estimated_people_in_catchment'])
+    cut1 = round(0.30 * n)   # end of 6p band
+    cut2 = round(0.60 * n)   # end of 12p band
+    for rank_idx, shelter_idx in enumerate(order):
+        if rank_idx < cut1:
+            cap = 6
+        elif rank_idx < cut2:
+            cap = 12
+        else:
+            cap = 20
+        results[shelter_idx]['suggested_capacity'] = cap
 
 def suggest_capacity(aadt, highway_type, maxspeed_str, alert_secs):
     try:
@@ -129,7 +131,7 @@ def suggest_capacity(aadt, highway_type, maxspeed_str, alert_secs):
     peak_flow_per_hour_per_dir = aadt * WARTIME_FRACTION * PEAK_HOUR_FRAC
     vehicles_in_catchment = peak_flow_per_hour_per_dir * (catchment_km / speed_kmh) * 2
     people = vehicles_in_catchment * PEOPLE_PER_VEHICLE
-    return people, round_up_to_standard(people), speed_kmh, catchment_km
+    return people, speed_kmh, catchment_km
 
 # ── Load road segments ────────────────────────────────────────────────────────
 print("Loading road segments ...")
@@ -170,7 +172,7 @@ for shelter in shelters:
     if alert_secs == BORDER_ALERT_SECONDS:
         near_border_count += 1
 
-    people, capacity, speed, catchment = suggest_capacity(
+    people, speed, catchment = suggest_capacity(
         nearest['aadt'], nearest['highway_type'], nearest['maxspeed'], alert_secs
     )
 
@@ -183,19 +185,22 @@ for shelter in shelters:
         'aadt_normal':                  nearest['aadt'],
         'aadt_wartime':                 round(nearest['aadt'] * WARTIME_FRACTION),
         'estimated_people_in_catchment': round(people, 1),
-        'suggested_capacity':           capacity,
+        'suggested_capacity':           0,   # filled by assign_capacity_by_rank
         'alert_seconds':                alert_secs,
         'nearest_seg_dist_km':          round(dist_to_seg, 2),
     })
 
+# ── Assign capacity tiers by rank (30 % / 30 % / 40 %) ───────────────────────
+assign_capacity_by_rank(results)
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 from collections import Counter
 cap_dist = Counter(r['suggested_capacity'] for r in results)
-print(f"\nCapacity distribution across {len(results)} shelters:")
+print(f"\nCapacity distribution across {len(results)} shelters (rank-based 30/30/40):")
 for size in STANDARD_SIZES:
     count = cap_dist.get(size, 0)
     bar = '█' * (count // 2)
-    print(f"  {size:>3} people: {count:>3}  {bar}")
+    print(f"  {size:>3} people: {count:>3}  {bar}  ({count/len(results)*100:.0f}%)")
 print(f"\nNear-border shelters (4-min window): {near_border_count}")
 print(f"Standard shelters (5-min window):    {len(results) - near_border_count}")
 

@@ -43,7 +43,7 @@ def risk_color(score):
     return RISK_BINS[-1][1]
 
 # ── Capacity → marker radius ──────────────────────────────────────────────────
-CAP_RADIUS = {6: 5, 12: 6, 20: 8, 30: 10, 50: 13}
+CAP_RADIUS = {6: 5, 12: 7, 20: 10}
 
 def cap_radius(cap):
     return CAP_RADIUS.get(int(cap), 7)
@@ -73,16 +73,7 @@ for r in rows:
     speed    = r['road_speed_kmh']
     catch    = r['catchment_per_dir_km']
     alerts   = int(r['nearby_alerts_marapr2026']) if r.get('nearby_alerts_marapr2026') else 0
-    base_cap = int(r['base_capacity'])
-    upgraded = r.get('capacity_upgraded', 'no') == 'yes'
-    reason   = r.get('upgrade_reason', '')
     alert_sec = r.get('alert_seconds', '')
-
-    upgrade_html = (
-        f"<span style='color:#E17055'>&#9650; upgraded from {base_cap}"
-        f" &nbsp;<i>({reason})</i></span><br>"
-        if upgraded else ""
-    )
 
     alert_win_html = (
         f"Alert window: <b>{int(alert_sec) // 60} min</b> "
@@ -100,7 +91,6 @@ for r in rows:
         f"{alert_win_html}"
         f"<hr style='margin:5px 0'>"
         f"<b>Capacity: {cap} people</b><br>"
-        f"{upgrade_html}"
         f"Est. people in catchment: {people:.1f}<br>"
         f"Catchment per direction: {catch} km<br>"
         f"Road speed: {speed} km/h<br>"
@@ -147,7 +137,7 @@ legend_html = """
   <hr style="margin:6px 0">
   <b style="font-size:11px;">Marker size = capacity</b><br>
   <span style="font-size:10px;color:#888">
-    &#9679; 6p &nbsp; &#9679; 12p &nbsp; &#9679; 20p &nbsp; &#9679; 30p &nbsp; &#9679; 50p
+    &#9679; 6p &nbsp; &#9679; 12p &nbsp; &#9679; 20p
   </span>
   <hr style="margin:6px 0">
   <span style="font-size:10px;color:#888">

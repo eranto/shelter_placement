@@ -30,7 +30,7 @@ except ImportError:
 HERE = Path("/Users/erantoch/My Drive (erantoch@gmail.com)/Public Work/code/Shelter Placement 2006")
 
 # ── Cost model (user-set prices) ─────────────────────────────────────────────
-CAPACITY_COST = {6: 73_000, 12: 100_000, 20: 150_000, 30: 200_000, 50: 250_000}
+CAPACITY_COST = {6: 73_000, 12: 100_000, 20: 150_000}
 MAINTENANCE_ANNUAL = 15_000   # ₪ per shelter per year
 RESERVE_PCT = 15              # contingency %
 
@@ -107,7 +107,7 @@ ws = wb.active
 ws.title = 'לוח בקרה'
 ws.sheet_view.rightToLeft = True
 
-cap_sizes  = [6, 12, 20, 30, 50]
+cap_sizes  = [6, 12, 20]
 cap_counts = Counter(s['capacity'] for s in shelters)
 total      = len(shelters)
 
