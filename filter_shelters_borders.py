@@ -40,10 +40,13 @@ DEFAULT_FILES = [
 # boundary line at a given latitude are in the West Bank.
 TIGHT_WB_WEST = [
     (31.82, 35.19),   # Ramallah corridor (consistent with base filter)
-    (31.72, 35.15),   # South Jerusalem / north Bethlehem (tighter than base 35.18)
-    (31.62, 35.11),   # South Bethlehem (tighter than base 35.13)
-    (31.52, 34.99),   # Hebron north (tighter than base 35.09)
-    (31.35, 34.97),   # Hebron south
+    (31.72, 35.14),   # South Jerusalem / north Bethlehem
+    (31.67, 35.10),   # Gush Etzion / road 367 area (catches rank 216)
+    (31.62, 35.02),   # South Bethlehem / Tarqumia corridor (catches rank 234)
+    (31.52, 34.97),   # Hebron north
+    (31.48, 34.95),   # Hebron south (catches rank 205)
+    (31.40, 34.93),   # South Hebron hills (catches rank 200)
+    (31.35, 34.93),   # South Hebron hills tip
 ]
 
 def _wb_boundary_lon(lat):
@@ -87,11 +90,25 @@ def strict_in_israel(lat, lon):
     if 31.0 <= lat <= 31.8 and lon > 35.46:
         return False, f'Dead Sea east of western shore (lon {lon:.4f} > 35.46)'
 
-    # ── Layer 5: Arava valley — east of Route 90 ─────────────────────────────
-    # Route 90 in the Arava runs at ~lon 35.0-35.1. Any road at lon > 35.15
-    # in this latitude band is east of Route 90 and likely in Jordan.
-    if 29.5 <= lat < 31.0 and lon > 35.15:
-        return False, f'Arava east of Route 90 corridor (lon {lon:.4f} > 35.15)'
+    # ── Layer 5: Arava valley — east of Israel–Jordan border ─────────────────
+    # The border runs as a straight line from Eilat/Aqaba (29.56, 35.00) to
+    # the Dead Sea south (31.05, 35.42). Use that formula without tolerance.
+    if 29.5 <= lat < 31.0:
+        arava_border = 35.00 + (lat - 29.56) / (31.05 - 29.56) * (35.42 - 35.00)
+        if lon > arava_border:
+            return False, f'Arava east of Israel–Jordan border (lon {lon:.4f} > {arava_border:.4f})'
+
+    # ── Layer 6: South of Eilat — Aqaba / Jordan east of Eilat ───────────────
+    # Below Eilat latitude (29.56°N) the Israel strip is very narrow.
+    # Points east of ~lon 34.97 are in Jordan / Gulf of Aqaba eastern shore.
+    if lat < 29.56 and lon > 34.97:
+        return False, f'Aqaba/Jordan south of Eilat (lon {lon:.4f} > 34.97)'
+
+    # ── Layer 7: Jenin district — tighter western boundary ───────────────────
+    # Base filter polygon has WB boundary at lon 35.19 at lat 32.50, but the
+    # actual Green Line is ~35.10 here (catches rank 379, road 596).
+    if 32.45 <= lat <= 32.56 and lon > 35.10:
+        return False, f'Jenin district WB (lon {lon:.4f} > 35.10 at lat {lat:.4f})'
 
     return True, ''
 
