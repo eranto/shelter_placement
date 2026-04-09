@@ -1,33 +1,112 @@
 """
-Filter any shelter CSV to only include points within Israel's 1967 Green Line borders.
+Geographic filter for Israel's 1967 Green Line borders.
 
-Applies two layers of filtering:
-  1. israel_1967_filter.in_1967_israel() — the base geometric filter
-  2. Additional strict rules targeting known gaps in the base filter:
-       - Lebanon border: base filter allows too high a latitude in the middle section
-       - West Bank (Bethlehem/Hebron): polygon western boundary is too far east
-       - Dead Sea eastern shore: no base rule covers lat 31.0-31.8 east of lon 35.46
-       - Arava valley: tolerance of 0.05 is too generous; also excludes roads that
-         run east of Route 90 (lon > 35.15) which are in Jordan
+Provides:
+  in_1967_israel(lat, lon)   — base geometric filter (bounding box + polygons)
+  strict_in_israel(lat, lon) — strict filter with additional rules for known gaps
+  filter_segment(seg)        — True if a road segment midpoint is within Israel
+  filter_csv(path)           — filter a shelter CSV in-place
 
-Usage:
+The strict filter layers:
+  1. Base bounding box + Lebanon/Golan/Jordan/WestBank/Gaza/Sinai checks
+  2. Lebanon border: tightened to lat 33.075 in the middle section
+  3. West Bank Bethlehem/Hebron corridor: tighter western boundary polyline
+  4. Dead Sea eastern shore: lon > 35.46 between lat 31.0–31.8
+  5. Arava valley: Israel–Jordan border formula without tolerance
+  6. South of Eilat: lon > 34.97 → Aqaba/Jordan
+  7. Jenin district: lon > 35.10 between lat 32.45–32.56
+
+Usage (as a script):
   python filter_shelters_borders.py                   # processes default files
   python filter_shelters_borders.py file1.csv ...     # processes named files
-
-For each input file the script:
-  1. Reads all rows and applies the combined filter to every (lat, lon) pair
-  2. Reports removed shelters and the rule that caught each one
-  3. Overwrites the file with the filtered rows (original backed up as *.bak)
-
-Requires columns named 'lat' and 'lon' (case-insensitive).
 """
 
-import csv, sys, shutil
+import csv, math, sys, shutil
 from pathlib import Path
 
 HERE = Path(__file__).parent
-sys.path.insert(0, str(HERE))
-from israel_1967_filter import in_1967_israel
+
+# ── Base filter (formerly israel_1967_filter.py) ──────────────────────────────
+
+def _pip(lat, lon, poly):
+    """Point-in-polygon test (ray casting). poly = list of (lat, lon)."""
+    inside = False
+    j = len(poly) - 1
+    for i in range(len(poly)):
+        yi, xi = poly[i]
+        yj, xj = poly[j]
+        if ((yi > lat) != (yj > lat)) and \
+           (lon < (xj - xi) * (lat - yi) / (yj - yi + 1e-12) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+# West Bank Green Line polygon — a point INSIDE is in the West Bank.
+WEST_BANK = [
+    (32.56, 35.19), (32.50, 35.19), (32.48, 35.12),
+    (32.35, 35.05), (32.30, 35.00), (32.18, 34.97),
+    (32.08, 34.99), (31.88, 34.97), (31.82, 35.19),
+    (31.72, 35.18), (31.62, 35.13), (31.52, 35.09),
+    (31.35, 35.03), (31.35, 35.57), (31.50, 35.57),
+    (31.78, 35.57), (32.00, 35.57), (32.20, 35.57),
+    (32.47, 35.57), (32.56, 35.52), (32.56, 35.19),
+]
+
+GAZA = [
+    (31.61, 34.28), (31.61, 34.60), (31.42, 34.53),
+    (31.22, 34.30), (31.22, 34.22), (31.61, 34.28),
+]
+
+def in_1967_israel(lat, lon):
+    """Return True if (lat, lon) is within Israel's pre-1967 / Green Line borders."""
+    if lat < 29.45 or lat > 33.35: return False
+    if lon < 34.15 or lon > 35.70: return False
+
+    # Lebanon / Syria border
+    if lon <= 35.10:
+        if lat > 33.07: return False
+    else:
+        leb_lat_limit = 33.07 + (lon - 35.10) / (35.65 - 35.10) * (33.27 - 33.07)
+        if lat > leb_lat_limit: return False
+
+    # Golan Heights
+    if 32.65 < lat <= 32.88 and lon > 35.63: return False
+    if lat > 32.88 and lon > 35.62: return False
+
+    # Jordan / east of Jordan River
+    if 31.0 <= lat <= 32.65 and lon > 35.57: return False
+    if 29.56 <= lat < 31.0:
+        arava_border = 35.00 + (lat - 29.56) / (31.05 - 29.56) * (35.42 - 35.00)
+        if lon > arava_border + 0.05: return False
+
+    # West Bank polygon
+    if _pip(lat, lon, WEST_BANK): return False
+
+    # Gaza Strip
+    if _pip(lat, lon, GAZA): return False
+
+    # Sinai / Egypt
+    if lat < 31.24:
+        t = (lat - 31.24) / (29.56 - 31.24)
+        border_lon = 34.24 + t * (34.95 - 34.24)
+        if lon < border_lon - 0.05: return False
+
+    # South of Eilat
+    if lat < 29.56 and lon < 34.88: return False
+
+    return True
+
+
+def filter_segment(seg):
+    """Return True if the road segment midpoint is within 1967 Israel."""
+    geom = seg.get('geom', [])
+    if not geom:
+        return False
+    lats = [p[0] for p in geom]
+    lons = [p[1] for p in geom]
+    mlat = sum(lats) / len(lats)
+    mlon = sum(lons) / len(lons)
+    return in_1967_israel(mlat, mlon)
 
 DEFAULT_FILES = [
     HERE / "shelters_priority_final.csv",
@@ -68,7 +147,7 @@ def strict_in_israel(lat, lon):
     """
     # ── Layer 1: base filter ──────────────────────────────────────────────────
     if not in_1967_israel(lat, lon):
-        return False, 'base filter (in_1967_israel)'
+        return False, 'base filter'
 
     # ── Layer 2: Lebanon border ───────────────────────────────────────────────
     # The base filter interpolates the Lebanon limit up to ~33.16 in the

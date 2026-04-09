@@ -9,7 +9,7 @@ import csv, math, sys
 from pathlib import Path
 from collections import Counter
 sys.path.insert(0, str(Path(__file__).parent))
-from israel_1967_filter import in_1967_israel
+from filter_shelters_borders import strict_in_israel
 
 HERE = Path("/Users/erantoch/My Drive (erantoch@gmail.com)/Public Work/code/Shelter Placement 2006")
 
@@ -54,7 +54,8 @@ out = []
 for r in rows:
     lat_f = float(r['lat'])
     lon_f = float(r['lon'])
-    if not in_1967_israel(lat_f, lon_f):
+    ok, _ = strict_in_israel(lat_f, lon_f)
+    if not ok:
         continue
 
     alerts   = int(r['nearby_alerts_marapr2026']) if r.get('nearby_alerts_marapr2026') else 0

@@ -98,7 +98,7 @@ def dijkstra_from(source, adj, N):
     return dist
 
 # ── Load OSM cache & build merged road list ───────────────────────────────────
-from israel_1967_filter import filter_segment, in_1967_israel
+from filter_shelters_borders import filter_segment, in_1967_israel
 
 print("Loading OSM road cache...")
 all_roads = pickle.load(open(CACHE, 'rb'))

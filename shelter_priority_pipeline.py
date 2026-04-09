@@ -18,7 +18,7 @@ import folium
 from folium.plugins import MarkerCluster
 
 sys.path.insert(0, str(Path("/Users/erantoch/My Drive (erantoch@gmail.com)/Public Work/code/Shelter Placement 2006")))
-from israel_1967_filter import in_1967_israel, filter_segment
+from filter_shelters_borders import in_1967_israel, filter_segment
 
 HERE       = Path("/Users/erantoch/My Drive (erantoch@gmail.com)/Public Work/code/Shelter Placement 2006")
 CKPT       = HERE / "shelter_points_priority.pkl"
