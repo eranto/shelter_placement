@@ -105,10 +105,17 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return R * 2 * math.asin(math.sqrt(a))
 
 def round_up_to_standard(n):
-    for size in STANDARD_SIZES:
-        if n <= size:
-            return size
-    return STANDARD_SIZES[-1]
+    """Map estimated catchment population to a shelter capacity tier.
+
+    Thresholds are set so that 12p is the most common outcome (typical road),
+    6p covers genuinely low-traffic rural roads, and larger sizes are reserved
+    for high-AADT corridors.
+    """
+    if n <=  9: return 6
+    if n <= 16: return 12
+    if n <= 24: return 20
+    if n <= 40: return 30
+    return 50
 
 def suggest_capacity(aadt, highway_type, maxspeed_str, alert_secs):
     try:
@@ -122,7 +129,7 @@ def suggest_capacity(aadt, highway_type, maxspeed_str, alert_secs):
     peak_flow_per_hour_per_dir = aadt * WARTIME_FRACTION * PEAK_HOUR_FRAC
     vehicles_in_catchment = peak_flow_per_hour_per_dir * (catchment_km / speed_kmh) * 2
     people = vehicles_in_catchment * PEOPLE_PER_VEHICLE
-    return people, round_up_to_standard(math.ceil(people)), speed_kmh, catchment_km
+    return people, round_up_to_standard(people), speed_kmh, catchment_km
 
 # ── Load road segments ────────────────────────────────────────────────────────
 print("Loading road segments ...")
