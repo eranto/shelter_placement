@@ -81,6 +81,7 @@ for r in rows:
         'suggested_capacity':           new_cap,
         'capacity_upgraded':            'yes' if new_cap != orig_cap else 'no',
         'upgrade_reason':               reason,
+        'alert_seconds':                r.get('alert_seconds', ''),
     })
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ fields = [
     'catchment_per_dir_km', 'aadt_normal', 'aadt_wartime',
     'estimated_people_in_catchment',
     'base_capacity', 'suggested_capacity', 'capacity_upgraded', 'upgrade_reason',
+    'alert_seconds',
 ]
 
 out_path = HERE / "shelters_final_placements.csv"
