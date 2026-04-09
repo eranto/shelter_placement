@@ -41,9 +41,11 @@ DEFAULT_FILES = [
 TIGHT_WB_WEST = [
     (31.82, 35.19),   # Ramallah corridor (consistent with base filter)
     (31.72, 35.14),   # South Jerusalem / north Bethlehem
-    (31.67, 35.10),   # Gush Etzion / road 367 area (catches rank 216)
-    (31.62, 35.02),   # South Bethlehem / Tarqumia corridor (catches rank 234)
-    (31.52, 34.97),   # Hebron north
+    (31.67, 35.10),   # Gush Etzion / road 367 area
+    (31.65, 35.05),   # Bethlehem south (catches rank 225)
+    (31.62, 35.02),   # Tarqumia corridor (catches rank 234)
+    (31.59, 34.95),   # Hebron north / route 35 area (catches rank 207)
+    (31.52, 34.95),   # Hebron center (catches rank 218 via flat boundary)
     (31.48, 34.95),   # Hebron south (catches rank 205)
     (31.40, 34.93),   # South Hebron hills (catches rank 200)
     (31.35, 34.93),   # South Hebron hills tip
