@@ -102,8 +102,8 @@ def in_1967_israel(lat, lon):
 
     # ── 3. Golan Heights (captured 1967, annexed 1981) ────────────────────
     # South of the Sea of Galilee NE corner (lat 32.65–32.88):
-    # Golan is east of ~lon 35.67 (eastern Kinneret shore is in Israel)
-    if 32.65 < lat <= 32.88 and lon > 35.67:
+    # Golan starts just east of the Sea of Galilee eastern shore (~lon 35.63)
+    if 32.65 < lat <= 32.88 and lon > 35.63:
         return False
     # North of the Sea of Galilee NE corner (lat > 32.88):
     # Jordan River runs at ~lon 35.59–35.62; Golan starts just east of it
